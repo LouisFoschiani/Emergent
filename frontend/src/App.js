@@ -1,52 +1,42 @@
-import { useEffect } from "react";
+import React from "react";
 import "./App.css";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import axios from "axios";
-
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
-const API = `${BACKEND_URL}/api`;
-
-const Home = () => {
-  const helloWorldApi = async () => {
-    try {
-      const response = await axios.get(`${API}/`);
-      console.log(response.data.message);
-    } catch (e) {
-      console.error(e, `errored out requesting / api`);
-    }
-  };
-
-  useEffect(() => {
-    helloWorldApi();
-  }, []);
-
-  return (
-    <div>
-      <header className="App-header">
-        <a
-          className="App-link"
-          href="https://emergent.sh"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <img src="https://avatars.githubusercontent.com/in/1201222?s=120&u=2686cf91179bbafbc7a71bfbc43004cf9ae1acea&v=4" />
-        </a>
-        <p className="mt-5">Building something incredible ~!</p>
-      </header>
-    </div>
-  );
-};
+import { ThemeProvider } from "./components/ThemeProvider";
+import Layout from "./components/Layout";
+import Dashboard from "./pages/Dashboard";
+import ManageUsers from "./pages/ManageUsers";
+import ManageGroups from "./pages/ManageGroups";
+import ManageEquipments from "./pages/ManageEquipments";
 
 function App() {
   return (
     <div className="App">
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Home />}>
-            <Route index element={<Home />} />
-          </Route>
-        </Routes>
-      </BrowserRouter>
+      <ThemeProvider>
+        <BrowserRouter>
+          <Layout>
+            <Routes>
+              <Route path="/" element={<Dashboard />} />
+              <Route path="/gestion/utilisateurs" element={<ManageUsers />} />
+              <Route path="/gestion/groupes" element={<ManageGroups />} />
+              <Route path="/gestion/equipements" element={<ManageEquipments />} />
+              <Route path="/utilisateurs" element={<ManageUsers />} />
+              <Route path="/groupes" element={<ManageGroups />} />
+              <Route path="/equipements" element={<ManageEquipments />} />
+              {/* Placeholder routes */}
+              <Route path="/plannings" element={<div className="p-6"><h1 className="text-2xl font-bold">Plannings - En construction</h1></div>} />
+              <Route path="/mes-amis" element={<div className="p-6"><h1 className="text-2xl font-bold">Mes amis - En construction</h1></div>} />
+              <Route path="/plans/*" element={<div className="p-6"><h1 className="text-2xl font-bold">Plans - En construction</h1></div>} />
+              <Route path="/statistiques" element={<div className="p-6"><h1 className="text-2xl font-bold">Statistiques - En construction</h1></div>} />
+              <Route path="/flex-offices" element={<div className="p-6"><h1 className="text-2xl font-bold">Flex offices - En construction</h1></div>} />
+              <Route path="/sites" element={<div className="p-6"><h1 className="text-2xl font-bold">Sites - En construction</h1></div>} />
+              <Route path="/configurations-reseau" element={<div className="p-6"><h1 className="text-2xl font-bold">Configurations réseau - En construction</h1></div>} />
+              <Route path="/capteurs" element={<div className="p-6"><h1 className="text-2xl font-bold">Capteurs - En construction</h1></div>} />
+              <Route path="/support" element={<div className="p-6"><h1 className="text-2xl font-bold">Support - En construction</h1></div>} />
+              <Route path="/documentation" element={<div className="p-6"><h1 className="text-2xl font-bold">Documentation - En construction</h1></div>} />
+            </Routes>
+          </Layout>
+        </BrowserRouter>
+      </ThemeProvider>
     </div>
   );
 }
