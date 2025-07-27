@@ -7,6 +7,9 @@ import Dashboard from "./pages/Dashboard";
 import ManageUsers from "./pages/ManageUsers";
 import ManageGroups from "./pages/ManageGroups";
 import ManageEquipments from "./pages/ManageEquipments";
+import FlexOffices from "./pages/FlexOffices";
+import OfficePlanEditor from "./pages/OfficePlanEditor";
+import OfficePlanViewer from "./pages/OfficePlanViewer";
 
 function App() {
   return (
@@ -22,12 +25,17 @@ function App() {
               <Route path="/utilisateurs" element={<ManageUsers />} />
               <Route path="/groupes" element={<ManageGroups />} />
               <Route path="/equipements" element={<ManageEquipments />} />
+              
+              {/* Flex Offices routes */}
+              <Route path="/flex-offices" element={<FlexOffices />} />
+              <Route path="/flex-offices/editor/:planId" element={<OfficePlanEditor />} />
+              <Route path="/flex-offices/view/:planId" element={<OfficePlanViewer />} />
+              
               {/* Placeholder routes */}
               <Route path="/plannings" element={<div className="p-6"><h1 className="text-2xl font-bold">Plannings - En construction</h1></div>} />
               <Route path="/mes-amis" element={<div className="p-6"><h1 className="text-2xl font-bold">Mes amis - En construction</h1></div>} />
               <Route path="/plans/*" element={<div className="p-6"><h1 className="text-2xl font-bold">Plans - En construction</h1></div>} />
               <Route path="/statistiques" element={<div className="p-6"><h1 className="text-2xl font-bold">Statistiques - En construction</h1></div>} />
-              <Route path="/flex-offices" element={<div className="p-6"><h1 className="text-2xl font-bold">Flex offices - En construction</h1></div>} />
               <Route path="/sites" element={<div className="p-6"><h1 className="text-2xl font-bold">Sites - En construction</h1></div>} />
               <Route path="/configurations-reseau" element={<div className="p-6"><h1 className="text-2xl font-bold">Configurations réseau - En construction</h1></div>} />
               <Route path="/capteurs" element={<div className="p-6"><h1 className="text-2xl font-bold">Capteurs - En construction</h1></div>} />
