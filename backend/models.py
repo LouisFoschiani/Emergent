@@ -30,6 +30,7 @@ class Permission(str, Enum):
     DELETE = "delete"
 
 class OfficeElementType(str, Enum):
+    # Furniture
     DESK = "desk"
     CHAIR = "chair"
     MEETING_ROOM = "meeting_room"
@@ -38,9 +39,18 @@ class OfficeElementType(str, Enum):
     KITCHEN = "kitchen"
     PRINTER = "printer"
     PLANT = "plant"
+    
+    # Structure
     WALL = "wall"
     DOOR = "door"
     WINDOW = "window"
+    FOUNDATION = "foundation"
+    PILLAR = "pillar"
+    
+    # Areas
+    RECEPTION = "reception"
+    BATHROOM = "bathroom"
+    STORAGE = "storage"
 
 class OfficeElementStatus(str, Enum):
     AVAILABLE = "available"
