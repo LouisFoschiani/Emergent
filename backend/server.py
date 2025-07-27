@@ -5,8 +5,8 @@ from motor.motor_asyncio import AsyncIOMotorClient
 import os
 import logging
 from pathlib import Path
-from backend.routes import users, groups, equipments, statistics
-from backend.models import User, Group, Equipment
+from routes import users, groups, equipments, statistics
+from models import User, Group, Equipment
 from datetime import datetime
 
 ROOT_DIR = Path(__file__).parent
