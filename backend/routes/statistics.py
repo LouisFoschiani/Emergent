@@ -1,10 +1,10 @@
 from fastapi import APIRouter
-from backend.models import Statistics
+from models import Statistics
 
 router = APIRouter()
 
 # MongoDB connection
-from backend.server import db
+from server import db
 
 @router.get("/", response_model=Statistics)
 async def get_statistics():
