@@ -1,14 +1,14 @@
 from fastapi import APIRouter, HTTPException
 from typing import List, Optional
 from motor.motor_asyncio import AsyncIOMotorClient
-from backend.models import User, UserCreate, UserUpdate
+from models import User, UserCreate, UserUpdate
 from datetime import datetime
 import os
 
 router = APIRouter()
 
 # MongoDB connection
-from backend.server import db
+from server import db
 
 @router.get("/", response_model=List[User])
 async def get_users(
