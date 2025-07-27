@@ -5,8 +5,8 @@ from motor.motor_asyncio import AsyncIOMotorClient
 import os
 import logging
 from pathlib import Path
-from routes import users, groups, equipments, statistics
-from models import User, Group, Equipment
+from routes import users, groups, equipments, statistics, office_plans
+from models import User, Group, Equipment, OfficePlan, OfficeElement
 from datetime import datetime
 
 ROOT_DIR = Path(__file__).parent
@@ -28,6 +28,7 @@ api_router.include_router(users.router, prefix="/users", tags=["users"])
 api_router.include_router(groups.router, prefix="/groups", tags=["groups"])
 api_router.include_router(equipments.router, prefix="/equipments", tags=["equipments"])
 api_router.include_router(statistics.router, prefix="/statistics", tags=["statistics"])
+api_router.include_router(office_plans.router, prefix="/office-plans", tags=["office-plans"])
 
 # Keep the original root endpoint
 @api_router.get("/")
@@ -230,5 +231,86 @@ async def seed_database():
     
     equipments = [Equipment(**equipment_data) for equipment_data in sample_equipments]
     await db.equipments.insert_many([equipment.dict() for equipment in equipments])
+    
+    # Sample office plan
+    sample_office_plan = OfficePlan(
+        name="Open Space Principal",
+        description="Plan principal de l'open space avec zones de travail collaboratives",
+        width=1200,
+        height=800,
+        background_color="#f8fafc",
+        grid_size=20,
+        created_by="Jean Dupont"
+    )
+    
+    await db.office_plans.insert_one(sample_office_plan.dict())
+    
+    # Sample office elements for the plan
+    sample_elements = [
+        {
+            "name": "Bureau 1",
+            "type": "desk",
+            "x": 100,
+            "y": 100,
+            "width": 120,
+            "height": 80,
+            "rotation": 0,
+            "status": "occupied",
+            "assigned_to": "Jean Dupont",
+            "office_plan_id": sample_office_plan.id,
+            "properties": {"color": "#3b82f6", "capacity": 1}
+        },
+        {
+            "name": "Bureau 2",
+            "type": "desk",
+            "x": 250,
+            "y": 100,
+            "width": 120,
+            "height": 80,
+            "rotation": 0,
+            "status": "available",
+            "office_plan_id": sample_office_plan.id,
+            "properties": {"color": "#10b981", "capacity": 1}
+        },
+        {
+            "name": "Salle de réunion A",
+            "type": "meeting_room",
+            "x": 400,
+            "y": 100,
+            "width": 200,
+            "height": 150,
+            "rotation": 0,
+            "status": "available",
+            "office_plan_id": sample_office_plan.id,
+            "properties": {"color": "#8b5cf6", "capacity": 8}
+        },
+        {
+            "name": "Cabine téléphonique",
+            "type": "phone_booth",
+            "x": 650,
+            "y": 100,
+            "width": 80,
+            "height": 80,
+            "rotation": 0,
+            "status": "available",
+            "office_plan_id": sample_office_plan.id,
+            "properties": {"color": "#f59e0b", "capacity": 1}
+        },
+        {
+            "name": "Espace détente",
+            "type": "lounge",
+            "x": 100,
+            "y": 300,
+            "width": 180,
+            "height": 120,
+            "rotation": 0,
+            "status": "available",
+            "office_plan_id": sample_office_plan.id,
+            "properties": {"color": "#06b6d4", "capacity": 6}
+        }
+    ]
+    
+    elements = [OfficeElement(**element_data) for element_data in sample_elements]
+    await db.office_elements.insert_many([element.dict() for element in elements])
     
     logger.info("Database seeded successfully!")
