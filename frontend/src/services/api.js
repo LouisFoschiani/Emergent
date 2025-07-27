@@ -43,6 +43,23 @@ export const equipmentsAPI = {
   unassign: (equipmentId) => api.put(`/equipments/${equipmentId}/unassign`),
 };
 
+// Office Plans API
+export const officePlansAPI = {
+  getAll: (params = {}) => api.get('/office-plans', { params }),
+  getById: (id) => api.get(`/office-plans/${id}`),
+  create: (planData) => api.post('/office-plans', planData),
+  update: (id, planData) => api.put(`/office-plans/${id}`, planData),
+  delete: (id) => api.delete(`/office-plans/${id}`),
+  duplicate: (id, newName, createdBy) => api.post(`/office-plans/${id}/duplicate`, null, {
+    params: { new_name: newName, created_by: createdBy }
+  }),
+  // Elements management
+  getElements: (planId) => api.get(`/office-plans/${planId}/elements`),
+  addElement: (planId, elementData) => api.post(`/office-plans/${planId}/elements`, elementData),
+  updateElement: (planId, elementId, elementData) => api.put(`/office-plans/${planId}/elements/${elementId}`, elementData),
+  deleteElement: (planId, elementId) => api.delete(`/office-plans/${planId}/elements/${elementId}`),
+};
+
 // Statistics API
 export const statisticsAPI = {
   get: () => api.get('/statistics'),
