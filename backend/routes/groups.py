@@ -1,13 +1,13 @@
 from fastapi import APIRouter, HTTPException
 from typing import List, Optional
-from backend.models import Group, GroupCreate, GroupUpdate
+from models import Group, GroupCreate, GroupUpdate
 from datetime import datetime
 import os
 
 router = APIRouter()
 
 # MongoDB connection
-from backend.server import db
+from server import db
 
 @router.get("/", response_model=List[Group])
 async def get_groups(
