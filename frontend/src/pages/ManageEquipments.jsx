@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -18,19 +18,68 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '../components/ui/dropdown-menu';
-import { Search, Plus, MoreHorizontal, Edit, Trash2, Eye, Computer, CheckCircle, AlertCircle, Clock } from 'lucide-react';
-import { mockEquipments } from '../data/mockData';
+import { Search, Plus, MoreHorizontal, Edit, Trash2, Eye, Computer, CheckCircle, AlertCircle, Clock, RefreshCw } from 'lucide-react';
+import { equipmentsAPI } from '../services/api';
+import { useToast } from '../hooks/use-toast';
 
 const ManageEquipments = () => {
-  const [equipments, setEquipments] = useState(mockEquipments);
+  const [equipments, setEquipments] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const { toast } = useToast();
 
-  const filteredEquipments = equipments.filter(equipment =>
-    equipment.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    equipment.type.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    equipment.serialNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (equipment.assignedTo && equipment.assignedTo.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  const fetchEquipments = async () => {
+    try {
+      setLoading(true);
+      const params = {};
+      if (searchTerm) {
+        params.search = searchTerm;
+      }
+      const response = await equipmentsAPI.getAll(params);
+      setEquipments(response.data);
+    } catch (error) {
+      console.error('Error fetching equipments:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de charger les équipements",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchEquipments();
+  }, []);
+
+  useEffect(() => {
+    const debounceTimer = setTimeout(() => {
+      fetchEquipments();
+    }, 500);
+
+    return () => clearTimeout(debounceTimer);
+  }, [searchTerm]);
+
+  const handleDeleteEquipment = async (equipmentId, equipmentName) => {
+    if (window.confirm(`Êtes-vous sûr de vouloir supprimer l'équipement ${equipmentName} ?`)) {
+      try {
+        await equipmentsAPI.delete(equipmentId);
+        toast({
+          title: "Succès",
+          description: "Équipement supprimé avec succès",
+        });
+        fetchEquipments();
+      } catch (error) {
+        console.error('Error deleting equipment:', error);
+        toast({
+          title: "Erreur",
+          description: "Impossible de supprimer l'équipement",
+          variant: "destructive",
+        });
+      }
+    }
+  };
 
   const getStatusBadge = (status) => {
     const statusConfig = {
@@ -62,12 +111,30 @@ const ManageEquipments = () => {
     }).format(value);
   };
 
+  const formatDate = (dateString) => {
+    if (!dateString) return '';
+    return new Date(dateString).toLocaleDateString('fr-FR');
+  };
+
   const stats = {
     total: equipments.length,
     inService: equipments.filter(e => e.status === 'En service').length,
     available: equipments.filter(e => e.status === 'Disponible').length,
     maintenance: equipments.filter(e => e.status === 'En maintenance').length
   };
+
+  if (loading && equipments.length === 0) {
+    return (
+      <div className="p-6">
+        <div className="flex items-center justify-center h-64">
+          <div className="flex items-center gap-2">
+            <RefreshCw className="w-5 h-5 animate-spin" />
+            <span>Chargement des équipements...</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6">
@@ -165,8 +232,12 @@ const ManageEquipments = () => {
                 className="pl-10"
               />
             </div>
-            <Button variant="outline">
-              Filtrer
+            <Button 
+              variant="outline" 
+              onClick={fetchEquipments}
+              disabled={loading}
+            >
+              {loading ? <RefreshCw className="w-4 h-4 animate-spin" /> : "Actualiser"}
             </Button>
           </div>
         </CardContent>
@@ -175,7 +246,7 @@ const ManageEquipments = () => {
       {/* Equipments Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Équipements ({filteredEquipments.length})</CardTitle>
+          <CardTitle>Équipements ({equipments.length})</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
@@ -194,63 +265,76 @@ const ManageEquipments = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredEquipments.map((equipment) => (
-                  <TableRow key={equipment.id} className="hover:bg-slate-50 dark:hover:bg-slate-800">
-                    <TableCell className="font-medium">
-                      <div className="flex items-center gap-2">
-                        {getTypeIcon(equipment.type)}
-                        {equipment.name}
+                {equipments.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={9} className="text-center py-8">
+                      <div className="text-slate-500 dark:text-slate-400">
+                        {searchTerm ? 'Aucun équipement trouvé pour cette recherche' : 'Aucun équipement trouvé'}
                       </div>
                     </TableCell>
-                    <TableCell>{equipment.type}</TableCell>
-                    <TableCell className="font-mono text-sm text-slate-600 dark:text-slate-400">
-                      {equipment.serialNumber}
-                    </TableCell>
-                    <TableCell>
-                      {getStatusBadge(equipment.status)}
-                    </TableCell>
-                    <TableCell>
-                      {equipment.assignedTo ? (
-                        <span className="text-slate-900 dark:text-white">{equipment.assignedTo}</span>
-                      ) : (
-                        <span className="text-slate-400">Non assigné</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-slate-600 dark:text-slate-400">
-                      {equipment.location}
-                    </TableCell>
-                    <TableCell className="font-medium">
-                      {formatCurrency(equipment.value)}
-                    </TableCell>
-                    <TableCell className="text-slate-600 dark:text-slate-400">
-                      {new Date(equipment.warranty).toLocaleDateString('fr-FR')}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" className="h-8 w-8 p-0">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem>
-                            <Eye className="mr-2 h-4 w-4" />
-                            Voir les détails
-                          </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            <Edit className="mr-2 h-4 w-4" />
-                            Modifier
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem className="text-red-600">
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Supprimer
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
                   </TableRow>
-                ))}
+                ) : (
+                  equipments.map((equipment) => (
+                    <TableRow key={equipment.id} className="hover:bg-slate-50 dark:hover:bg-slate-800">
+                      <TableCell className="font-medium">
+                        <div className="flex items-center gap-2">
+                          {getTypeIcon(equipment.type)}
+                          {equipment.name}
+                        </div>
+                      </TableCell>
+                      <TableCell>{equipment.type}</TableCell>
+                      <TableCell className="font-mono text-sm text-slate-600 dark:text-slate-400">
+                        {equipment.serial_number}
+                      </TableCell>
+                      <TableCell>
+                        {getStatusBadge(equipment.status)}
+                      </TableCell>
+                      <TableCell>
+                        {equipment.assigned_to ? (
+                          <span className="text-slate-900 dark:text-white">{equipment.assigned_to}</span>
+                        ) : (
+                          <span className="text-slate-400">Non assigné</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-slate-600 dark:text-slate-400">
+                        {equipment.location}
+                      </TableCell>
+                      <TableCell className="font-medium">
+                        {formatCurrency(equipment.value)}
+                      </TableCell>
+                      <TableCell className="text-slate-600 dark:text-slate-400">
+                        {formatDate(equipment.warranty)}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="h-8 w-8 p-0">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem>
+                              <Eye className="mr-2 h-4 w-4" />
+                              Voir les détails
+                            </DropdownMenuItem>
+                            <DropdownMenuItem>
+                              <Edit className="mr-2 h-4 w-4" />
+                              Modifier
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem 
+                              className="text-red-600"
+                              onClick={() => handleDeleteEquipment(equipment.id, equipment.name)}
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Supprimer
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
           </div>

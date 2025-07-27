@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -18,18 +18,68 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '../components/ui/dropdown-menu';
-import { Search, Plus, MoreHorizontal, Edit, Trash2, Eye, Users, Shield } from 'lucide-react';
-import { mockGroups } from '../data/mockData';
+import { Search, Plus, MoreHorizontal, Edit, Trash2, Eye, Users, Shield, RefreshCw } from 'lucide-react';
+import { groupsAPI } from '../services/api';
+import { useToast } from '../hooks/use-toast';
 
 const ManageGroups = () => {
-  const [groups, setGroups] = useState(mockGroups);
+  const [groups, setGroups] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const { toast } = useToast();
 
-  const filteredGroups = groups.filter(group =>
-    group.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    group.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    group.leader.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const fetchGroups = async () => {
+    try {
+      setLoading(true);
+      const params = {};
+      if (searchTerm) {
+        params.search = searchTerm;
+      }
+      const response = await groupsAPI.getAll(params);
+      setGroups(response.data);
+    } catch (error) {
+      console.error('Error fetching groups:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de charger les groupes",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchGroups();
+  }, []);
+
+  useEffect(() => {
+    const debounceTimer = setTimeout(() => {
+      fetchGroups();
+    }, 500);
+
+    return () => clearTimeout(debounceTimer);
+  }, [searchTerm]);
+
+  const handleDeleteGroup = async (groupId, groupName) => {
+    if (window.confirm(`Êtes-vous sûr de vouloir supprimer le groupe ${groupName} ?`)) {
+      try {
+        await groupsAPI.delete(groupId);
+        toast({
+          title: "Succès",
+          description: "Groupe supprimé avec succès",
+        });
+        fetchGroups();
+      } catch (error) {
+        console.error('Error deleting group:', error);
+        toast({
+          title: "Erreur",
+          description: "Impossible de supprimer le groupe",
+          variant: "destructive",
+        });
+      }
+    }
+  };
 
   const getStatusBadge = (status) => {
     return status === 'Actif' ? (
@@ -65,6 +115,30 @@ const ManageGroups = () => {
     );
   };
 
+  const formatDate = (dateString) => {
+    if (!dateString) return '';
+    return new Date(dateString).toLocaleDateString('fr-FR');
+  };
+
+  const stats = {
+    total: groups.length,
+    active: groups.filter(g => g.status === 'Actif').length,
+    totalMembers: groups.reduce((sum, group) => sum + group.members, 0)
+  };
+
+  if (loading && groups.length === 0) {
+    return (
+      <div className="p-6">
+        <div className="flex items-center justify-center h-64">
+          <div className="flex items-center gap-2">
+            <RefreshCw className="w-5 h-5 animate-spin" />
+            <span>Chargement des groupes...</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
@@ -92,7 +166,7 @@ const ManageGroups = () => {
                   Total groupes
                 </p>
                 <p className="text-2xl font-bold text-slate-900 dark:text-white">
-                  {groups.length}
+                  {stats.total}
                 </p>
               </div>
             </div>
@@ -107,7 +181,7 @@ const ManageGroups = () => {
                   Groupes actifs
                 </p>
                 <p className="text-2xl font-bold text-slate-900 dark:text-white">
-                  {groups.filter(g => g.status === 'Actif').length}
+                  {stats.active}
                 </p>
               </div>
             </div>
@@ -122,7 +196,7 @@ const ManageGroups = () => {
                   Total membres
                 </p>
                 <p className="text-2xl font-bold text-slate-900 dark:text-white">
-                  {groups.reduce((sum, group) => sum + group.members, 0)}
+                  {stats.totalMembers}
                 </p>
               </div>
             </div>
@@ -146,8 +220,12 @@ const ManageGroups = () => {
                 className="pl-10"
               />
             </div>
-            <Button variant="outline">
-              Filtrer
+            <Button 
+              variant="outline" 
+              onClick={fetchGroups}
+              disabled={loading}
+            >
+              {loading ? <RefreshCw className="w-4 h-4 animate-spin" /> : "Actualiser"}
             </Button>
           </div>
         </CardContent>
@@ -156,7 +234,7 @@ const ManageGroups = () => {
       {/* Groups Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Groupes ({filteredGroups.length})</CardTitle>
+          <CardTitle>Groupes ({groups.length})</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
@@ -174,58 +252,71 @@ const ManageGroups = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredGroups.map((group) => (
-                  <TableRow key={group.id} className="hover:bg-slate-50 dark:hover:bg-slate-800">
-                    <TableCell className="font-medium">{group.name}</TableCell>
-                    <TableCell className="text-slate-600 dark:text-slate-400 max-w-xs truncate">
-                      {group.description}
-                    </TableCell>
-                    <TableCell>{group.leader}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1">
-                        <Users className="w-4 h-4 text-slate-400" />
-                        <span>{group.members}</span>
+                {groups.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className="text-center py-8">
+                      <div className="text-slate-500 dark:text-slate-400">
+                        {searchTerm ? 'Aucun groupe trouvé pour cette recherche' : 'Aucun groupe trouvé'}
                       </div>
                     </TableCell>
-                    <TableCell>
-                      {getStatusBadge(group.status)}
-                    </TableCell>
-                    <TableCell>
-                      {getPermissionsBadges(group.permissions)}
-                    </TableCell>
-                    <TableCell className="text-slate-600 dark:text-slate-400">
-                      {new Date(group.created).toLocaleDateString('fr-FR')}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" className="h-8 w-8 p-0">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem>
-                            <Eye className="mr-2 h-4 w-4" />
-                            Voir les détails
-                          </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            <Users className="mr-2 h-4 w-4" />
-                            Gérer les membres
-                          </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            <Edit className="mr-2 h-4 w-4" />
-                            Modifier
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem className="text-red-600">
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Supprimer
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
                   </TableRow>
-                ))}
+                ) : (
+                  groups.map((group) => (
+                    <TableRow key={group.id} className="hover:bg-slate-50 dark:hover:bg-slate-800">
+                      <TableCell className="font-medium">{group.name}</TableCell>
+                      <TableCell className="text-slate-600 dark:text-slate-400 max-w-xs truncate">
+                        {group.description}
+                      </TableCell>
+                      <TableCell>{group.leader}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1">
+                          <Users className="w-4 h-4 text-slate-400" />
+                          <span>{group.members}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {getStatusBadge(group.status)}
+                      </TableCell>
+                      <TableCell>
+                        {getPermissionsBadges(group.permissions)}
+                      </TableCell>
+                      <TableCell className="text-slate-600 dark:text-slate-400">
+                        {formatDate(group.created_at)}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="h-8 w-8 p-0">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem>
+                              <Eye className="mr-2 h-4 w-4" />
+                              Voir les détails
+                            </DropdownMenuItem>
+                            <DropdownMenuItem>
+                              <Users className="mr-2 h-4 w-4" />
+                              Gérer les membres
+                            </DropdownMenuItem>
+                            <DropdownMenuItem>
+                              <Edit className="mr-2 h-4 w-4" />
+                              Modifier
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem 
+                              className="text-red-600"
+                              onClick={() => handleDeleteGroup(group.id, group.name)}
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Supprimer
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
           </div>
