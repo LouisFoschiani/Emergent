@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -18,18 +18,68 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '../components/ui/dropdown-menu';
-import { Search, Plus, MoreHorizontal, Edit, Trash2, Eye } from 'lucide-react';
-import { mockUsers } from '../data/mockData';
+import { Search, Plus, MoreHorizontal, Edit, Trash2, Eye, RefreshCw } from 'lucide-react';
+import { usersAPI } from '../services/api';
+import { useToast } from '../hooks/use-toast';
 
 const ManageUsers = () => {
-  const [users, setUsers] = useState(mockUsers);
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const { toast } = useToast();
 
-  const filteredUsers = users.filter(user =>
-    user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.department.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const fetchUsers = async () => {
+    try {
+      setLoading(true);
+      const params = {};
+      if (searchTerm) {
+        params.search = searchTerm;
+      }
+      const response = await usersAPI.getAll(params);
+      setUsers(response.data);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de charger les utilisateurs",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
+  useEffect(() => {
+    const debounceTimer = setTimeout(() => {
+      fetchUsers();
+    }, 500);
+
+    return () => clearTimeout(debounceTimer);
+  }, [searchTerm]);
+
+  const handleDeleteUser = async (userId, userName) => {
+    if (window.confirm(`Êtes-vous sûr de vouloir supprimer l'utilisateur ${userName} ?`)) {
+      try {
+        await usersAPI.delete(userId);
+        toast({
+          title: "Succès",
+          description: "Utilisateur supprimé avec succès",
+        });
+        fetchUsers();
+      } catch (error) {
+        console.error('Error deleting user:', error);
+        toast({
+          title: "Erreur",
+          description: "Impossible de supprimer l'utilisateur",
+          variant: "destructive",
+        });
+      }
+    }
+  };
 
   const getStatusBadge = (status) => {
     return status === 'Actif' ? (
@@ -56,6 +106,24 @@ const ManageUsers = () => {
       </Badge>
     );
   };
+
+  const formatDate = (dateString) => {
+    if (!dateString) return 'Jamais';
+    return new Date(dateString).toLocaleString('fr-FR');
+  };
+
+  if (loading && users.length === 0) {
+    return (
+      <div className="p-6">
+        <div className="flex items-center justify-center h-64">
+          <div className="flex items-center gap-2">
+            <RefreshCw className="w-5 h-5 animate-spin" />
+            <span>Chargement des utilisateurs...</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6">
@@ -89,8 +157,12 @@ const ManageUsers = () => {
                 className="pl-10"
               />
             </div>
-            <Button variant="outline">
-              Filtrer
+            <Button 
+              variant="outline" 
+              onClick={fetchUsers}
+              disabled={loading}
+            >
+              {loading ? <RefreshCw className="w-4 h-4 animate-spin" /> : "Actualiser"}
             </Button>
           </div>
         </CardContent>
@@ -99,7 +171,7 @@ const ManageUsers = () => {
       {/* Users Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Utilisateurs ({filteredUsers.length})</CardTitle>
+          <CardTitle>Utilisateurs ({users.length})</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
@@ -117,51 +189,64 @@ const ManageUsers = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredUsers.map((user) => (
-                  <TableRow key={user.id} className="hover:bg-slate-50 dark:hover:bg-slate-800">
-                    <TableCell className="font-medium">{user.name}</TableCell>
-                    <TableCell className="text-slate-600 dark:text-slate-400">
-                      {user.email}
-                    </TableCell>
-                    <TableCell>
-                      {getRoleBadge(user.role)}
-                    </TableCell>
-                    <TableCell>{user.department}</TableCell>
-                    <TableCell>
-                      {getStatusBadge(user.status)}
-                    </TableCell>
-                    <TableCell className="text-slate-600 dark:text-slate-400">
-                      {user.lastLogin}
-                    </TableCell>
-                    <TableCell className="text-slate-600 dark:text-slate-400">
-                      {user.phone}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" className="h-8 w-8 p-0">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem>
-                            <Eye className="mr-2 h-4 w-4" />
-                            Voir le profil
-                          </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            <Edit className="mr-2 h-4 w-4" />
-                            Modifier
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem className="text-red-600">
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Supprimer
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                {users.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className="text-center py-8">
+                      <div className="text-slate-500 dark:text-slate-400">
+                        {searchTerm ? 'Aucun utilisateur trouvé pour cette recherche' : 'Aucun utilisateur trouvé'}
+                      </div>
                     </TableCell>
                   </TableRow>
-                ))}
+                ) : (
+                  users.map((user) => (
+                    <TableRow key={user.id} className="hover:bg-slate-50 dark:hover:bg-slate-800">
+                      <TableCell className="font-medium">{user.name}</TableCell>
+                      <TableCell className="text-slate-600 dark:text-slate-400">
+                        {user.email}
+                      </TableCell>
+                      <TableCell>
+                        {getRoleBadge(user.role)}
+                      </TableCell>
+                      <TableCell>{user.department}</TableCell>
+                      <TableCell>
+                        {getStatusBadge(user.status)}
+                      </TableCell>
+                      <TableCell className="text-slate-600 dark:text-slate-400">
+                        {formatDate(user.last_login)}
+                      </TableCell>
+                      <TableCell className="text-slate-600 dark:text-slate-400">
+                        {user.phone}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="h-8 w-8 p-0">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem>
+                              <Eye className="mr-2 h-4 w-4" />
+                              Voir le profil
+                            </DropdownMenuItem>
+                            <DropdownMenuItem>
+                              <Edit className="mr-2 h-4 w-4" />
+                              Modifier
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem 
+                              className="text-red-600"
+                              onClick={() => handleDeleteUser(user.id, user.name)}
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Supprimer
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
           </div>

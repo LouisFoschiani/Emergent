@@ -1,35 +1,76 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
 import { Users, Heart, Calendar, User, Building2, Computer, TrendingUp, Activity } from 'lucide-react';
-import { mockStats } from '../data/mockData';
+import { statisticsAPI } from '../services/api';
 
 const Dashboard = () => {
+  const [stats, setStats] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchStatistics = async () => {
+      try {
+        setLoading(true);
+        const response = await statisticsAPI.get();
+        setStats(response.data);
+      } catch (err) {
+        setError('Erreur lors du chargement des statistiques');
+        console.error('Error fetching statistics:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchStatistics();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="p-6">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-lg">Chargement...</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-6">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-red-500">{error}</div>
+        </div>
+      </div>
+    );
+  }
+
   const statsCards = [
     {
       title: "Utilisateurs totaux",
-      value: mockStats.totalUsers,
+      value: stats?.total_users || 0,
       change: "+12%",
       icon: Users,
       color: "text-blue-500"
     },
     {
       title: "Utilisateurs actifs",
-      value: mockStats.activeUsers,
+      value: stats?.active_users || 0,
       change: "+8%",
       icon: Activity,
       color: "text-green-500"
     },
     {
       title: "Groupes",
-      value: mockStats.totalGroups,
+      value: stats?.total_groups || 0,
       change: "+3%",
       icon: Building2,
       color: "text-purple-500"
     },
     {
       title: "Équipements",
-      value: mockStats.totalEquipments,
+      value: stats?.total_equipments || 0,
       change: "+15%",
       icon: Computer,
       color: "text-orange-500"
@@ -71,6 +112,62 @@ const Dashboard = () => {
           </Card>
         ))}
       </div>
+
+      {/* Equipment Stats */}
+      {stats && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Computer className="w-5 h-5 text-green-500" />
+                En service
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-slate-900 dark:text-white">
+                {stats.equipments_in_service}
+              </div>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                équipements actifs
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Computer className="w-5 h-5 text-blue-500" />
+                Disponibles
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-slate-900 dark:text-white">
+                {stats.equipments_available}
+              </div>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                équipements libres
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Computer className="w-5 h-5 text-orange-500" />
+                En maintenance
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-slate-900 dark:text-white">
+                {stats.equipments_in_maintenance}
+              </div>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                équipements en réparation
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
